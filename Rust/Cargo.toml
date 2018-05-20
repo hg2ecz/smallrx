@@ -1,0 +1,6 @@
+[package]
+name = "smallrx"
+version = "0.1.0"
+authors = ["Zsolt Krüpl <hg2ecz@ham.hu>"]
+
+[dependencies]
