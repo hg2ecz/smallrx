@@ -101,7 +101,7 @@ fn main() { //syntax: rx <center_freq> <rx_freq> <l[sb]|u[sb]|a[m]|f[m]>
             // decimate
             let mut decim: Complex<f32> = Complex::new(0., 0.);
             for i in 0 .. decimate_taps_length { decim += samplebuf[i] * decimate_taps[i]; }
-            samplebuf = samplebuf[decimate_factor .. decimate_taps_length].into();
+            samplebuf.drain(..decimate_factor);
 
             // demodulate
             let soundout: i16;
