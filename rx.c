@@ -73,11 +73,11 @@ int main(int argc, char *argv[]) { //syntax: rx <center_freq> <rx_freq> <l[sb]|u
 
         // decimator: every N. sample   and   demodulate
         if(++decimate_counter >= decimate_factor) {
-            decimate_counter = 0;
             // decimate
             complex float decim = 0;
             for(int i=0; i<=decimate_taps_length; i++) decim += samplebuf[i] * decimate_taps[i];
             memmove(samplebuf, samplebuf+decimate_factor, (decimate_taps_length-decimate_factor)*sizeof(complex float));
+            decimate_counter = 0;
 
             // demodulate
             short soundout;
