@@ -1,5 +1,6 @@
 CC=gcc
-CFLAGS=-Wall -Ofast -march=native
+CFLAGS =-Wall -Ofast -march=native
+#CFLAGS+=-DPRINTFREQZ
 LDFLAGS=-lm
 
 OBJS=rx.o
