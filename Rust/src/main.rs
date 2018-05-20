@@ -107,7 +107,7 @@ fn main() { //syntax: rx <center_freq> <rx_freq> <l[sb]|u[sb]|a[m]|f[m]>
             let soundout: i16;
             match modulation {
                 'f' => { // <-- fmdemod
-                    let phi: f32 = if decim.re != 0. { (decim.im / decim.re).atan() } else { M_PI/2. };
+                    let phi: f32 = if decim.re != 0. { decim.arg() } else { M_PI/2. };
                     let mut dphi: f32 = phi-last_phi;
                     last_phi = phi;
                     while dphi < -M_PI { dphi += 2.*M_PI; }
