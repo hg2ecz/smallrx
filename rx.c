@@ -28,6 +28,7 @@ int main(int argc, char *argv[]) { //syntax: rx <center_freq> <rx_freq> <l[sb]|u
     const int decimate_taps_length = (int)(4.0/(decimate_transition_bw/samp_rate)) | 1; //(should be odd)
     const int decimate_taps_middle = decimate_taps_length/2;
     const float dshift = 2*M_PI*(rx_freq - center_freq)/samp_rate;
+    fprintf(stderr, "decimate_taps_len: %d\n", decimate_taps_length);
     //calculate filter taps
     complex float* decimate_taps = malloc(sizeof(complex float)*decimate_taps_length);
     const float decimate_cutoff_rate = (modulation == 'u'|| modulation == 'l') ? (ssb_bw/2.)/samp_rate : (amfm_bw/2.)/samp_rate;
