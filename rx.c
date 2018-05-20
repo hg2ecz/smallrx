@@ -65,7 +65,9 @@ int main(int argc, char *argv[]) { //syntax: rx <center_freq> <rx_freq> <l[sb]|u
     while(1) {
         // read 8bit[2] input from stdin   and  convert to complex float
         if(feof(stdin)) break;
-        complex float sample = ( ((float)getchar())/(UCHAR_MAX/2.0)-1.0 )  +  I*( ((float)getchar())/(UCHAR_MAX/2.0)-1.0 );
+        float in_a = getchar();
+        float in_b = getchar();
+        complex float sample = in_a/(UCHAR_MAX/2.0)-1.0   +  I*( in_b/(UCHAR_MAX/2.0)-1.0 );
 
         // oscillator & mixer
         shift += dshift; if (shift > 2*M_PI) shift-=2*M_PI;
