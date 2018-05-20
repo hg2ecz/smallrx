@@ -1,3 +1,6 @@
+extern crate num_complex;
+use num_complex::Complex;
+
 use std::env;
 use std::io::{self, Read, Write, BufReader, BufWriter};
 
@@ -9,35 +12,6 @@ const SSB_BW: f32 = 3000.;
 const AMFM_BW: f32 = 12000.;
 
 const M_PI: f32 = std::f32::consts::PI;
-
-#[derive(Copy,Clone)]
-pub struct Cplx {
-    pub re: f32,
-    pub im: f32,
-}
-
-pub fn cadd(a: Cplx, b: Cplx) -> Cplx {
-    let re = a.re + b.re;
-    let im = a.im + b.im;
-    Cplx {re, im}
-}
-
-pub fn csub(a: Cplx, b: Cplx) -> Cplx {
-    let re = a.re - b.re;
-    let im = a.im - b.im;
-    Cplx {re, im}
-}
-
-pub fn cmul(a: Cplx, b: Cplx) -> Cplx {
-    let re = a.re * b.re - a.im * b.im;
-    let im = a.re * b.im + a.im * b.re;
-    Cplx {re, im}
-}
-
-pub fn cabs(a: Cplx) -> f32 {
-    (a.re * a.re + a.im * a.im).sqrt()
-}
-
 
 fn hamming(x: f32) -> f32 {
     0.54-0.46*(2.*M_PI*(0.5+(x/2.)))
@@ -59,16 +33,16 @@ fn main() { //syntax: rx <center_freq> <rx_freq> <l[sb]|u[sb]|a[m]|f[m]>
     let dshift: f32 = 2.*std::f64::consts::PI as f32*(rx_freq - center_freq) as f32/SAMP_RATE as f32;
     eprintln!("decimate_taps_len: {}", decimate_taps_length);
     //calculate filter taps
-    let mut decimate_taps: Vec<Cplx> = vec![Cplx{re: 0., im: 0.}; decimate_taps_length];
+    let mut decimate_taps: Vec<Complex<f32>> = vec![Complex::new(0., 0.); decimate_taps_length];
     let decimate_cutoff_rate: f32 = if modulation == 'u' || modulation == 'l' {
         (SSB_BW/2.)/SAMP_RATE as f32
     } else {
         (AMFM_BW/2.)/SAMP_RATE as f32
     };
-    decimate_taps[decimate_taps_middle] = Cplx{re: 2. * M_PI * decimate_cutoff_rate * hamming(0.), im: 0.};
+    decimate_taps[decimate_taps_middle] = Complex::new(2. * M_PI * decimate_cutoff_rate * hamming(0.), 0.);
     for i in 1 .. decimate_taps_middle+1 {
         decimate_taps[decimate_taps_middle+i] =
-           Cplx{re: (2.*M_PI*decimate_cutoff_rate*i as f32).sin()/i as f32 * hamming(i as f32/decimate_taps_middle as f32), im: 0.};
+           Complex::new((2.*M_PI*decimate_cutoff_rate*i as f32).sin()/i as f32 * hamming(i as f32/decimate_taps_middle as f32), 0.);
         decimate_taps[decimate_taps_middle-i] = decimate_taps[decimate_taps_middle+i]
     }
     let mut shift: f32 = 0.;
@@ -77,14 +51,14 @@ fn main() { //syntax: rx <center_freq> <rx_freq> <l[sb]|u[sb]|a[m]|f[m]>
 
     if true && (modulation == 'u' || modulation == 'l') {
         for i in 0 .. decimate_taps_length {
-            decimate_taps[i] = cmul(decimate_taps[i as usize], Cplx{re: shift.sin(), im: shift.cos()});
+            decimate_taps[i] *= Complex::new(shift.sin(), shift.cos());
             shift += decimate_dshift;
             if shift > 2.*M_PI { shift -= 2.*M_PI; }
         }
     }
     // normalize filter
     let mut decimate_taps_sum: f32 = 0.;
-    for i in 0 .. decimate_taps_length { decimate_taps_sum += cabs(decimate_taps[i]); }
+    for i in 0 .. decimate_taps_length { decimate_taps_sum += decimate_taps[i].norm(); }
     for i in 0 .. decimate_taps_length {
         decimate_taps[i].re /= decimate_taps_sum;
         decimate_taps[i].im /= decimate_taps_sum;
@@ -100,7 +74,7 @@ fn main() { //syntax: rx <center_freq> <rx_freq> <l[sb]|u[sb]|a[m]|f[m]>
 #endif
 */
     shift = 0.;
-    let mut samplebuf: Vec<Cplx> = vec![Cplx{re: 0., im: 0.}; decimate_taps_length];
+    let mut samplebuf: Vec<Complex<f32>> = vec![Complex::new(0., 0.); decimate_taps_length];
     let mut last_phi: f32 = 0.;
     //let getchar: Option<i32> = std::io::stdin().bytes().next().and_then(|result| result.ok()).map(|byte| byte as i32);
 
@@ -113,20 +87,20 @@ fn main() { //syntax: rx <center_freq> <rx_freq> <l[sb]|u[sb]|a[m]|f[m]>
         if let Some(in_aa) = input.next() { in_a = in_aa.unwrap() } else { break; }
         if let Some(in_bb) = input.next() { in_b = in_bb.unwrap() } else { break; }
 
-        let sample: Cplx = Cplx {
-            re: in_a as f32/(std::u8::MAX as f32/2.)-1.,
-            im: in_b as f32/(std::u8::MAX as f32/2.)-1.
-        };
+        let sample: Complex<f32> = Complex::new(
+            in_a as f32/(std::u8::MAX as f32/2.)-1.,
+            in_b as f32/(std::u8::MAX as f32/2.)-1.
+        );
         // oscillator & mixer
         shift += dshift;
         if shift > 2.*M_PI { shift-=2.*M_PI; }
-        samplebuf.push( cmul(Cplx{re: shift.sin(), im: shift.cos()}, sample) ); // mix & buf
+        samplebuf.push( Complex::new(shift.sin(), shift.cos()) * sample ); // mix & buf
 
         // decimator: every N. sample   and   demodulate
         if samplebuf.len() >= decimate_taps_length {
             // decimate
-            let mut decim: Cplx = Cplx{re: 0., im: 0.};
-            for i in 0 .. decimate_taps_length { decim = cadd(decim, cmul(samplebuf[i], decimate_taps[i])); }
+            let mut decim: Complex<f32> = Complex::new(0., 0.);
+            for i in 0 .. decimate_taps_length { decim += samplebuf[i] * decimate_taps[i]; }
             samplebuf = samplebuf[decimate_factor .. decimate_taps_length].into();
 
             // demodulate
@@ -140,7 +114,7 @@ fn main() { //syntax: rx <center_freq> <rx_freq> <l[sb]|u[sb]|a[m]|f[m]>
                     while dphi >  M_PI { dphi -= 2.*M_PI; }
                     soundout = ((std::i16::MAX-1) as f32 * (dphi/M_PI)) as i16;
                 },
-                'a' => soundout = (cabs(decim) * std::i16::MAX as f32) as i16, // <-- amdemod
+                'a' => soundout = (decim.norm() * std::i16::MAX as f32) as i16, // <-- amdemod
                 _   => soundout = (decim.re * std::i16::MAX as f32) as i16, // <-- ssbdemod
             }
             // write demodulated sound to stdout
