@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) { //syntax: rx <center_freq> <rx_freq> <l[sb]|u
     char modulation = argv[3][0]; // l[sb], u[sb], a[m], f[m]
 
     const int decimate_factor = samp_rate / output_rate;
-    const int decimate_taps_length = (int)(4.0/(decimate_transition_bw/samp_rate)) | 1; //(should be odd)
+    const int decimate_taps_length = (int)(4.0f/(decimate_transition_bw/samp_rate)) | 1; //(should be odd)
     const int decimate_taps_middle = decimate_taps_length/2;
     const float dshift = 2*M_PI*(rx_freq - center_freq)/samp_rate;
     fprintf(stderr, "decimate_taps_len: %d\n", decimate_taps_length);
