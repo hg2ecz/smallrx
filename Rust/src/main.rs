@@ -4,8 +4,8 @@ use num_complex::Complex;
 use std::env;
 use std::io::{self, Read, Write, BufReader, BufWriter};
 
-const SAMP_RATE: i32 = 240000;
-const OUTPUT_RATE: i32 = 48000;
+const SAMP_RATE: i32 = 240_000;
+const OUTPUT_RATE: i32 = 48_000;
 
 const DECIMATE_TRANSITION_BW: f32 = 800.;
 const SSB_BW: f32 = 3000.;
@@ -40,7 +40,7 @@ fn main() { //syntax: rx <center_freq> <rx_freq> <l[sb]|u[sb]|a[m]|f[m]>
         (AMFM_BW/2.)/SAMP_RATE as f32
     };
     decimate_taps[decimate_taps_middle] = Complex::new(2. * M_PI * decimate_cutoff_rate * hamming(0.), 0.);
-    for i in 1 .. decimate_taps_middle+1 {
+    for i in 1..=decimate_taps_middle {
         decimate_taps[decimate_taps_middle+i] =
            Complex::new((2.*M_PI*decimate_cutoff_rate*i as f32).sin()/i as f32 * hamming(i as f32/decimate_taps_middle as f32), 0.);
         decimate_taps[decimate_taps_middle-i] = decimate_taps[decimate_taps_middle+i]
@@ -49,19 +49,19 @@ fn main() { //syntax: rx <center_freq> <rx_freq> <l[sb]|u[sb]|a[m]|f[m]>
     // make the filter asymmetric in case of SSB
     let decimate_dshift: f32 = if modulation == 'u' { 1. } else { -1. } * ((SSB_BW/2.)/SAMP_RATE as f32)*2.*M_PI; // USB or LSB
 
-    if true && (modulation == 'u' || modulation == 'l') {
-        for i in 0 .. decimate_taps_length {
-            decimate_taps[i] *= Complex::new(shift.sin(), shift.cos());
+    if modulation == 'u' || modulation == 'l' {
+        for dtaps in &mut decimate_taps {
+            *dtaps *= Complex::new(shift.sin(), shift.cos());
             shift += decimate_dshift;
             if shift > 2.*M_PI { shift -= 2.*M_PI; }
         }
     }
     // normalize filter
     let mut decimate_taps_sum: f32 = 0.;
-    for i in 0 .. decimate_taps_length { decimate_taps_sum += decimate_taps[i].norm(); }
-    for i in 0 .. decimate_taps_length {
-        decimate_taps[i].re /= decimate_taps_sum;
-        decimate_taps[i].im /= decimate_taps_sum;
+    for dtaps in &decimate_taps { decimate_taps_sum += dtaps.norm(); }
+    for dtaps in &mut decimate_taps {
+        dtaps.re /= decimate_taps_sum;
+        dtaps.im /= decimate_taps_sum;
     }
 /*
 #ifdef PRINTFREQZ
@@ -88,8 +88,8 @@ fn main() { //syntax: rx <center_freq> <rx_freq> <l[sb]|u[sb]|a[m]|f[m]>
         if let Some(in_bb) = input.next() { in_b = in_bb.unwrap() } else { break; }
 
         let sample: Complex<f32> = Complex::new(
-            in_a as f32/(std::u8::MAX as f32/2.)-1.,
-            in_b as f32/(std::u8::MAX as f32/2.)-1.
+            f32::from(in_a)/(f32::from(std::u8::MAX)/2.)-1.,
+            f32::from(in_b)/(f32::from(std::u8::MAX)/2.)-1.
         );
         // oscillator & mixer
         shift += dshift;
@@ -112,14 +112,14 @@ fn main() { //syntax: rx <center_freq> <rx_freq> <l[sb]|u[sb]|a[m]|f[m]>
                     last_phi = phi;
                     while dphi < -M_PI { dphi += 2.*M_PI; }
                     while dphi >  M_PI { dphi -= 2.*M_PI; }
-                    soundout = ((std::i16::MAX-1) as f32 * (dphi/M_PI)) as i16;
+                    soundout = (f32::from(std::i16::MAX-1) * (dphi/M_PI)) as i16;
                 },
-                'a' => soundout = (decim.norm() * std::i16::MAX as f32) as i16, // <-- amdemod
-                _   => soundout = (decim.re * std::i16::MAX as f32) as i16, // <-- ssbdemod
+                'a' => soundout = (decim.norm() * f32::from(std::i16::MAX)) as i16, // <-- amdemod
+                _   => soundout = (decim.re * f32::from(std::i16::MAX)) as i16, // <-- ssbdemod
             }
             // write demodulated sound to stdout
             let out: [u8; 2] = [(soundout & 0xff) as u8, (soundout >> 8) as u8];
-            outstream.write(&out).unwrap();
+            outstream.write_all(&out).unwrap();
         }
     } // while(1)
 }
